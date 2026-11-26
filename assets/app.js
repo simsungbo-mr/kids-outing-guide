@@ -4,6 +4,8 @@
   const STORAGE_KEY_FAVS = 'kids_outing_favs_v1';
   const STORAGE_KEY_VISITED = 'kids_outing_visited_v1';
   const STORAGE_KEY_CUSTOM = 'kids_outing_custom_places_v1';
+  const MAX_BUDGET_SLIDER = 130000;
+  const REGIONS_ORDER = ['전체', '서울', '경기', '인천', '강원', '충청·세종·대전', '경상·부산·대구', '전라·광주', '제주'];
 
   let state = {
     places: [],
@@ -14,11 +16,15 @@
     filters: {
       search: '',
       region: '전체',
+      subRegion: '전체',
       category: '전체',
       priceTier: '전체',
       ageGroup: '전체',
       parkingType: '전체',
       environment: '전체',
+      reservation: '전체',
+      valueGrade: '전체',
+      maxPrice: MAX_BUDGET_SLIDER,
       sortBy: 'value'
     },
     favorites: new Set(),
@@ -108,8 +114,45 @@
       });
     }
 
+    updateSubRegionOptions();
+    renderRegionPills();
     updateHeaderStats();
     renderAll();
+  }
+
+  function renderRegionPills() {
+    const wrap = document.getElementById('region-pills');
+    if (!wrap) return;
+    wrap.innerHTML = REGIONS_ORDER.map((r) => {
+      const count = r === '전체' ? state.places.length : state.places.filter((p) => p.region === r).length;
+      const isActive = state.filters.region === r;
+      const label = r === '전체' ? '전국 전체' : r;
+      return `
+        <button type="button" data-region-pill="${escapeHtml(r)}" class="shrink-0 px-3 py-1.5 rounded-xl text-xs font-bold border transition ${isActive ? 'bg-slate-900 text-white border-slate-900 shadow-sm' : 'bg-white text-slate-700 border-slate-200 hover:border-slate-400'}">
+          <span>${escapeHtml(label)}</span>
+          <span class="ml-1 px-1.5 py-0.5 rounded-full text-[10px] ${isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'}">${count}</span>
+        </button>`;
+    }).join('');
+  }
+
+  function updateSubRegionOptions() {
+    const sel = document.getElementById('filter-subregion');
+    if (!sel) return;
+    const pool = state.filters.region === '전체'
+      ? state.places
+      : state.places.filter((p) => p.region === state.filters.region);
+    const subSet = Array.from(new Set(pool.map((p) => p.subRegion).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'ko'));
+
+    const prev = state.filters.subRegion;
+    sel.innerHTML = `<option value="전체">세부 지역 전체 (${subSet.length})</option>` +
+      subSet.map((s) => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
+
+    if (prev !== '전체' && subSet.includes(prev)) {
+      sel.value = prev;
+    } else {
+      state.filters.subRegion = '전체';
+      sel.value = '전체';
+    }
   }
 
   function getFilteredPlaces() {
@@ -124,13 +167,18 @@
       if (state.activePreset === 'new' && !(p.category === '신상 오픈' || p.isNew)) return false;
       if (state.activePreset === 'freepark' && p.parkingType !== '무료 주차') return false;
       if (state.activePreset === 'indoor' && !(p.environment === '실내' || p.environment === '실내+야외')) return false;
+      if (state.activePreset === 'nores' && p.reservation !== '예약 불필요') return false;
 
       if (f.region !== '전체' && p.region !== f.region) return false;
+      if (f.subRegion !== '전체' && p.subRegion !== f.subRegion) return false;
       if (f.category !== '전체' && p.category !== f.category) return false;
       if (f.priceTier !== '전체' && p.priceTier !== f.priceTier) return false;
       if (f.ageGroup !== '전체' && (!Array.isArray(p.ageGroups) || !p.ageGroups.includes(f.ageGroup))) return false;
       if (f.parkingType !== '전체' && p.parkingType !== f.parkingType) return false;
       if (f.environment !== '전체' && p.environment !== f.environment) return false;
+      if (f.reservation !== '전체' && p.reservation !== f.reservation) return false;
+      if (f.valueGrade !== '전체' && p.valueGrade !== f.valueGrade) return false;
+      if (f.maxPrice < MAX_BUDGET_SLIDER && (Number(p.priceMin) || 0) > f.maxPrice) return false;
 
       if (q) {
         const hay = [
@@ -142,6 +190,7 @@
           p.priceText,
           p.ageDetail,
           p.parkingDetail,
+          p.reservation,
           p.valueReason,
           ...(p.highlights || [])
         ].join(' ').toLowerCase();
@@ -166,6 +215,39 @@
     }
 
     return list;
+  }
+
+  function renderActiveFilterChips() {
+    const wrap = document.getElementById('active-filter-chips');
+    if (!wrap) return;
+    const chips = [];
+    const f = state.filters;
+
+    if (f.region !== '전체') chips.push({ key: 'region', label: `권역: ${f.region}` });
+    if (f.subRegion !== '전체') chips.push({ key: 'subRegion', label: `세부지역: ${f.subRegion}` });
+    if (f.category !== '전체') chips.push({ key: 'category', label: `카테고리: ${f.category}` });
+    if (f.priceTier !== '전체') chips.push({ key: 'priceTier', label: `가격대: ${f.priceTier}` });
+    if (f.ageGroup !== '전체') chips.push({ key: 'ageGroup', label: `연령: ${f.ageGroup}` });
+    if (f.parkingType !== '전체') chips.push({ key: 'parkingType', label: `주차: ${f.parkingType}` });
+    if (f.environment !== '전체') chips.push({ key: 'environment', label: `환경: ${f.environment}` });
+    if (f.reservation !== '전체') chips.push({ key: 'reservation', label: `예약: ${f.reservation}` });
+    if (f.valueGrade !== '전체') chips.push({ key: 'valueGrade', label: `가성비: ${f.valueGrade}등급` });
+    if (f.maxPrice < MAX_BUDGET_SLIDER) {
+      chips.push({ key: 'maxPrice', label: f.maxPrice === 0 ? '예산: 무료만' : `예산: ${f.maxPrice.toLocaleString()}원 이하` });
+    }
+    if (f.search.trim()) chips.push({ key: 'search', label: `검색: "${f.search.trim()}"` });
+
+    if (chips.length === 0) {
+      wrap.innerHTML = '';
+      return;
+    }
+
+    wrap.innerHTML = chips.map((c) => `
+      <button type="button" data-clear-filter="${escapeHtml(c.key)}" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-orange-50 text-orange-700 border border-orange-200 text-[11px] font-semibold hover:bg-orange-100 transition">
+        <span>${escapeHtml(c.label)}</span>
+        <span class="font-bold">×</span>
+      </button>
+    `).join('');
   }
 
   function updateHeaderStats() {
@@ -213,7 +295,7 @@
       container.innerHTML = `
         <div class="col-span-full bg-white rounded-2xl border border-dashed border-slate-300 p-10 text-center">
           <p class="text-lg font-bold text-slate-700 mb-1">조건에 맞는 장소가 없습니다</p>
-          <p class="text-sm text-slate-500 mb-4">필터를 조금 넓히거나 초기화해 전국 34곳의 추천 코스를 확인해 보세요.</p>
+          <p class="text-sm text-slate-500 mb-4">필터를 조금 넓히거나 초기화해 전국 ${state.places.length}곳의 추천 코스를 확인해 보세요.</p>
           <button type="button" data-action="reset-filters" class="px-4 py-2 rounded-xl bg-orange-500 text-white text-sm font-semibold hover:bg-orange-600 transition">필터 초기화</button>
         </div>`;
       return;
@@ -276,7 +358,7 @@
           <div class="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
             <div class="flex flex-wrap items-center gap-1.5">
               <span class="text-[11px] font-semibold px-2 py-0.5 rounded-md ${parkStyle}">🚗 ${escapeHtml(p.parkingType)}</span>
-              ${p.suitableFor5 ? '<span class="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-orange-50 text-orange-700">👶 5살 딱!</span>' : '<span class="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-slate-100 text-slate-500">키/연령 확인</span>'}
+              ${p.suitableFor5 ? '<span class="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-orange-50 text-orange-700">👶 5살 딱!</span>' : '<span class="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-slate-100 text-slate-500">연령 확인</span>'}
             </div>
             <span class="text-xs font-semibold text-sky-600 shrink-0">상세보기 →</span>
           </div>
@@ -295,13 +377,13 @@
 
     container.innerHTML = `
       <div class="bg-white rounded-2xl border border-slate-200 overflow-x-auto">
-        <table class="w-full text-left border-collapse min-w-[760px]">
+        <table class="w-full text-left border-collapse min-w-[820px]">
           <thead>
             <tr class="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-600">
               <th class="py-3 px-4">장소 / 공연명</th>
               <th class="py-3 px-3">지역</th>
               <th class="py-3 px-3">가격대</th>
-              <th class="py-3 px-3">5살 적합</th>
+              <th class="py-3 px-3">예약</th>
               <th class="py-3 px-3">주차</th>
               <th class="py-3 px-3">가성비</th>
               <th class="py-3 px-3 text-right">상세</th>
@@ -316,7 +398,7 @@
                 </td>
                 <td class="py-3 px-3 text-slate-700">${escapeHtml(p.region)}<br><span class="text-[11px] text-slate-400">${escapeHtml(p.subRegion)}</span></td>
                 <td class="py-3 px-3 font-semibold text-slate-800">${escapeHtml(p.priceText)}</td>
-                <td class="py-3 px-3">${p.suitableFor5 ? '<span class="px-2 py-0.5 rounded bg-orange-50 text-orange-700 font-semibold">추천</span>' : '<span class="px-2 py-0.5 rounded bg-slate-100 text-slate-500">확인</span>'}</td>
+                <td class="py-3 px-3 text-slate-600">${escapeHtml(p.reservation)}</td>
                 <td class="py-3 px-3"><span class="px-2 py-0.5 rounded font-medium ${getParkingBadgeStyle(p.parkingType)}">${escapeHtml(p.parkingType)}</span></td>
                 <td class="py-3 px-3"><span class="px-2 py-0.5 rounded-full font-bold grade-${escapeHtml(p.valueGrade)}">${escapeHtml(p.valueGrade)}</span></td>
                 <td class="py-3 px-3 text-right text-sky-600 font-semibold">보기</td>
@@ -330,7 +412,9 @@
   function renderExplore() {
     const filtered = getFilteredPlaces();
     const countEl = document.getElementById('result-count');
-    if (countEl) countEl.textContent = `총 ${filtered.length}건`;
+    if (countEl) countEl.textContent = `검색 결과 ${filtered.length}건 / 전체 ${state.places.length}건`;
+
+    renderActiveFilterChips();
 
     const cardsWrap = document.getElementById('cards-grid');
     const tableWrap = document.getElementById('table-container');
@@ -384,13 +468,13 @@
           maintainAspectRatio: false,
           plugins: { legend: { display: false } },
           scales: {
-            y: { beginAtZero: true, ticks: { stepSize: 2 } }
+            y: { beginAtZero: true }
           }
         }
       });
     }
 
-    const regions = ['서울', '경기', '인천', '강원', '충청·세종·대전', '경상·부산·대구', '전라·광주', '제주'];
+    const regions = REGIONS_ORDER.filter((r) => r !== '전체');
     const regionCounts = regions.map((r) => state.places.filter((p) => p.region === r).length);
 
     const regionCtx = document.getElementById('chart-region');
@@ -519,6 +603,7 @@
 
   function renderAll() {
     updateHeaderStats();
+    renderRegionPills();
     if (state.activeTab === 'explore') {
       renderExplore();
     } else if (state.activeTab === 'analytics') {
@@ -529,33 +614,56 @@
     if (window.lucide) window.lucide.createIcons();
   }
 
+  function updateMaxPriceLabel() {
+    const lbl = document.getElementById('maxprice-label');
+    if (!lbl) return;
+    const v = state.filters.maxPrice;
+    if (v >= MAX_BUDGET_SLIDER) lbl.textContent = '제한 없음';
+    else if (v === 0) lbl.textContent = '무료만 (0원)';
+    else lbl.textContent = `${v.toLocaleString()}원 이하`;
+  }
+
+  function syncFilterInputsFromState() {
+    const f = state.filters;
+    const map = {
+      'filter-search': f.search,
+      'filter-region': f.region,
+      'filter-subregion': f.subRegion,
+      'filter-category': f.category,
+      'filter-price': f.priceTier,
+      'filter-age': f.ageGroup,
+      'filter-parking': f.parkingType,
+      'filter-env': f.environment,
+      'filter-reservation': f.reservation,
+      'filter-grade': f.valueGrade,
+      'filter-maxprice': f.maxPrice,
+      'filter-sort': f.sortBy
+    };
+    Object.keys(map).forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.value = map[id];
+    });
+    updateMaxPriceLabel();
+  }
+
   function resetAllFilters() {
     state.activePreset = 'all';
     state.filters = {
       search: '',
       region: '전체',
+      subRegion: '전체',
       category: '전체',
       priceTier: '전체',
       ageGroup: '전체',
       parkingType: '전체',
       environment: '전체',
+      reservation: '전체',
+      valueGrade: '전체',
+      maxPrice: MAX_BUDGET_SLIDER,
       sortBy: 'value'
     };
-
-    const mapping = {
-      'filter-search': '',
-      'filter-region': '전체',
-      'filter-category': '전체',
-      'filter-price': '전체',
-      'filter-age': '전체',
-      'filter-parking': '전체',
-      'filter-env': '전체',
-      'filter-sort': 'value'
-    };
-    Object.keys(mapping).forEach((id) => {
-      const el = document.getElementById(id);
-      if (el) el.value = mapping[id];
-    });
+    updateSubRegionOptions();
+    syncFilterInputsFromState();
     document.querySelectorAll('[data-preset]').forEach((btn) => {
       btn.classList.toggle('active', btn.getAttribute('data-preset') === 'all');
     });
@@ -618,6 +726,31 @@
       const tabBtn = e.target.closest('[data-tab]');
       if (tabBtn) {
         switchTab(tabBtn.getAttribute('data-tab'));
+        return;
+      }
+
+      const regionPill = e.target.closest('[data-region-pill]');
+      if (regionPill) {
+        state.filters.region = regionPill.getAttribute('data-region-pill');
+        state.filters.subRegion = '전체';
+        updateSubRegionOptions();
+        syncFilterInputsFromState();
+        renderAll();
+        return;
+      }
+
+      const clearChip = e.target.closest('[data-clear-filter]');
+      if (clearChip) {
+        const key = clearChip.getAttribute('data-clear-filter');
+        if (key === 'maxPrice') state.filters.maxPrice = MAX_BUDGET_SLIDER;
+        else if (key === 'search') state.filters.search = '';
+        else state.filters[key] = '전체';
+        if (key === 'region') {
+          state.filters.subRegion = '전체';
+          updateSubRegionOptions();
+        }
+        syncFilterInputsFromState();
+        renderAll();
         return;
       }
 
@@ -718,7 +851,17 @@
       if (!el) return;
       const evt = el.tagName === 'INPUT' ? 'input' : 'change';
       el.addEventListener(evt, (e) => {
-        state.filters[key] = e.target.value;
+        if (key === 'maxPrice') {
+          state.filters.maxPrice = Number(e.target.value);
+          updateMaxPriceLabel();
+        } else {
+          state.filters[key] = e.target.value;
+        }
+        if (key === 'region') {
+          state.filters.subRegion = '전체';
+          updateSubRegionOptions();
+          renderRegionPills();
+        }
         renderExplore();
         if (window.lucide) window.lucide.createIcons();
       });
@@ -726,11 +869,15 @@
 
     bindFilter('filter-search', 'search');
     bindFilter('filter-region', 'region');
+    bindFilter('filter-subregion', 'subRegion');
     bindFilter('filter-category', 'category');
     bindFilter('filter-price', 'priceTier');
     bindFilter('filter-age', 'ageGroup');
     bindFilter('filter-parking', 'parkingType');
     bindFilter('filter-env', 'environment');
+    bindFilter('filter-reservation', 'reservation');
+    bindFilter('filter-grade', 'valueGrade');
+    bindFilter('filter-maxprice', 'maxPrice');
     bindFilter('filter-sort', 'sortBy');
 
     const addForm = document.getElementById('daily-add-form');
@@ -780,6 +927,7 @@
         safeStorageSet(STORAGE_KEY_CUSTOM, savedCustom);
 
         addForm.reset();
+        updateSubRegionOptions();
         showToast(`"${title}" 항목이 추가되었습니다! JSON 다운로드로 GitHub에 반영할 수 있어요.`);
         switchTab('explore');
       });
@@ -801,6 +949,7 @@
             }
             state.places = arr;
             if (parsed.meta) state.meta = parsed.meta;
+            updateSubRegionOptions();
             showToast(`총 ${arr.length}건의 데이터를 불러왔습니다!`);
             switchTab('explore');
           } catch (err) {
