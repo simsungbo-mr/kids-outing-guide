@@ -327,7 +327,15 @@
               </div>
             </div>
 
-            <h3 class="text-base font-bold text-slate-900 leading-snug mb-1.5">${escapeHtml(p.title)}</h3>
+            <div class="flex items-start gap-3 mb-2">
+              ${p.posterUrl ? `<img src="${escapeHtml(p.posterUrl)}" alt="${escapeHtml(p.title)} 포스터" loading="lazy" class="w-14 h-20 object-cover rounded-lg border border-slate-200 shrink-0" onerror="this.style.display='none'">` : ''}
+              <div class="min-w-0 flex-1">
+                <div class="flex flex-wrap items-center gap-1 mb-1">
+                  ${p.isLiveApi ? '<span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200">LIVE KOPIS</span>' : ''}
+                </div>
+                <h3 class="text-base font-bold text-slate-900 leading-snug">${escapeHtml(p.title)}</h3>
+              </div>
+            </div>
             <p class="text-xs text-slate-500 flex items-center gap-1 mb-3">
               <i data-lucide="map-pin" class="w-3.5 h-3.5 text-slate-400 shrink-0"></i>
               <span>${escapeHtml(p.region)} · ${escapeHtml(p.subRegion)}</span>
@@ -535,7 +543,13 @@
             <span class="text-xs font-bold px-2.5 py-0.5 rounded-full grade-${escapeHtml(p.valueGrade)}">${gradeLabel}</span>
             ${p.suitableFor5 ? '<span class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-orange-100 text-orange-700">👶 5살 아이 추천</span>' : ''}
           </div>
-          <h2 class="text-xl font-extrabold text-slate-900">${escapeHtml(p.title)}</h2>
+          <div class="flex items-start gap-3.5">
+            ${p.posterUrl ? `<img src="${escapeHtml(p.posterUrl)}" alt="${escapeHtml(p.title)} 포스터" class="w-20 h-28 object-cover rounded-xl border border-slate-200 shrink-0 shadow-sm" onerror="this.style.display='none'">` : ''}
+            <div>
+              <h2 class="text-xl font-extrabold text-slate-900">${escapeHtml(p.title)}</h2>
+              ${p.isLiveApi ? '<span class="inline-block mt-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">KOPIS 실시간 연동 공연</span>' : ''}
+            </div>
+          </div>
           <p class="text-sm text-slate-500 mt-1">${escapeHtml(p.address)}</p>
         </div>
         <button type="button" data-close-modal="true" class="p-2 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition">
