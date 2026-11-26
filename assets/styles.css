@@ -1,0 +1,85 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+:root {
+  --bg-page: #f8fafc;
+  --brand-primary: #ff6b4a;
+  --brand-secondary: #0ea5e9;
+  --brand-mint: #10b981;
+  --brand-amber: #f59e0b;
+}
+
+body {
+  font-family: 'Inter', 'Apple SD Gothic Neo', 'Malgun Gothic', -apple-system, BlinkMacSystemFont, sans-serif;
+  background-color: var(--bg-page);
+  color: #0f172a;
+  overflow-x: hidden;
+}
+
+.hero-overlay {
+  background: linear-gradient(100deg, rgba(15, 23, 42, 0.82) 0%, rgba(15, 23, 42, 0.52) 55%, rgba(15, 23, 42, 0.25) 100%);
+}
+
+.preset-chip {
+  transition: all 0.18s ease;
+}
+
+.preset-chip.active {
+  background-color: #ff6b4a;
+  color: #ffffff;
+  border-color: #ff6b4a;
+  box-shadow: 0 4px 12px rgba(255, 107, 74, 0.28);
+}
+
+.place-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.place-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 24px -8px rgba(15, 23, 42, 0.12);
+  border-color: #cbd5e1;
+}
+
+.tab-btn.active {
+  color: #ff6b4a;
+  border-bottom: 2.5px solid #ff6b4a;
+  font-weight: 700;
+}
+
+.grade-S {
+  background: linear-gradient(135deg, #059669, #10b981);
+  color: #ffffff;
+}
+
+.grade-A {
+  background: linear-gradient(135deg, #0284c7, #38bdf8);
+  color: #ffffff;
+}
+
+.grade-B {
+  background: linear-gradient(135deg, #d97706, #fbbf24);
+  color: #ffffff;
+}
+
+.toast-enter {
+  animation: toastSlideUp 0.25s ease forwards;
+}
+
+@keyframes toastSlideUp {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 16px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
